@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unionfs"
+version = "1.0.0"
+dependencies = [
+]
+requires-python = ">=3.13.12"
+authors = [
+  {name = "Théo Bori", email = "theobori@disroot.org"}
+]
+maintainers = [
+  {name = "Théo Bori", email = "theobori@disroot.org"}
+]
+description = ""
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["virtual filesystem", "filesystem", "fuse", "union"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python"
+]
+
+[project.urls]
+Homepage = "https://github.com/theobori/unionfs"
+Documentation = "https://github.com/theobori/unionfs"
+Repository = "https://github.com/theobori/unionfs"
+
+[tool.setuptools]
+packages = ["unionfs"]

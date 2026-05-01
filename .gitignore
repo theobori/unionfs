@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# My additional files to ignore
+.direnv
+result
