@@ -24,6 +24,9 @@ classifiers = [
   "Programming Language :: Python"
 ]
 
+[project.scripts]
+unionfs = "unionfs.cli.unionfs:cli_unionfs"
+
 [project.urls]
 Homepage = "https://github.com/theobori/unionfs"
 Documentation = "https://github.com/theobori/unionfs"

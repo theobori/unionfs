@@ -15,7 +15,7 @@ buildPythonPackage {
     hatch
   ];
 
-  dependencies = [];
+  dependencies = [ ];
 
   # nativeCheckInputs = [ pytestCheckHook ];
 
