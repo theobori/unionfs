@@ -15,10 +15,8 @@ class HelperSet[T: Hashable]:
     the UnionFS daemon.
 
     It must be able to do the following operations:
-    - LIFO value insertion a with time complexity describe by O(1)
-    - FIFO value insertion a with time complexity describe by O(1)
-    - LIFO value deletion a with time complexity describe by O(1)
-    - FIFO value deletion a with time complexity describe by O(1)
+    - LIFO value insertion and deletion a with time complexity describe by O(1)
+    - FIFO value insertion and deletion a with time complexity describe by O(1)
     - Retrieving an inserted value a with time complexity describe by O(1)
     - Removing any value an inserted value a with time complexity describe by O(1)
     - Insert a value after another an inserted value a with time complexity describe by O(1)

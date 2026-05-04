@@ -1,0 +1,1 @@
+USELESS = 0

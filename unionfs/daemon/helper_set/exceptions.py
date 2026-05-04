@@ -1,16 +1,10 @@
 """The helper set exceptions module."""
 
-from typing import Optional
+from unionfs.exceptions import UnionFSError
 
 
-class HelperSetError(Exception):
+class HelperSetError(UnionFSError):
     """HelperSet base error."""
-
-    def __init__(self, message: Optional[str] = None):
-        self.__message = message
-
-    def __str__(self) -> str:
-        return "An error occured." if self.__message is None else self.__message
 
 
 class HelperSetEmptyError(HelperSetError):

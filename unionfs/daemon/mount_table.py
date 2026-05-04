@@ -9,6 +9,7 @@ from typing import NoReturn
 from unionfs.common.bind import InsertType
 from unionfs.daemon.exceptions import (
     MountTableAlreadyExistError,
+    MountTableNoMountPointError,
     MountTableNotExistError,
     MountTableValueError,
 )
@@ -18,59 +19,84 @@ type TableType[T] = Dict[T, HelperSet[T]]
 
 
 class MountTable[T]:
+    # TODO: check circular mount
+
     def __init__(self):
         self.__table: Dict[T, HelperSet[T]] = defaultdict(HelperSet[T])
 
     def create_bind(
-        self, source_path: Path, destination_path: Path, insert_type: InsertType
+        self, source: Path, destination: Path, insert_type: InsertType
     ) -> NoReturn:
-        source_set = self.__table[source_path]
+        if not source in self.__table:
+            raise MountTableNoMountPointError(f"There are no mountpoint for {source}")
 
-        if destination_path in source_set:
+        destinations = self.__table[source]
+
+        if destination in destinations:
             raise MountTableAlreadyExistError(
-                f"The bind '{source_path}' to '{destination_path}' already exists."
+                f"The bind '{source}' to '{destination}' already exists."
             )
 
         match insert_type:
             case InsertType.AFTER:
-                source_set.push(destination_path)
+                destinations.push(destination)
             case InsertType.BEFORE:
-                source_set.pushleft(destination_path)
+                destinations.pushleft(destination)
             case _:
                 raise MountTableValueError("Invalid insert type.")
 
-        n = len(source_path.name)
+        source_str = str(source)
+        n = len(source_str)
 
-        for source, destination in self.__table.items():
-            if len(source.name) > n and source.name.startswith(source_path.name):
-                new_path = destination_path / Path(source)
+        for k_source, v_destinations in self.__table.items():
+            k_source_str = str(k_source)
+            if len(k_source_str) > n and k_source_str.startswith(source_str):
+                new_path = destination / k_source
 
                 match insert_type:
                     case InsertType.AFTER:
-                        destination.push(new_path)
+                        v_destinations.push(new_path)
                     case InsertType.BEFORE:
-                        destination.pushleft(new_path)
+                        v_destinations.pushleft(new_path)
 
-    def remove_bind(self, source_path: Path, destination_path: Path) -> NoReturn:
-        source_set = self.__table[source_path]
+    def remove_bind(self, source: Path, destination: Path) -> NoReturn:
+        if not source in self.__table:
+            raise MountTableNoMountPointError(f"There are no mountpoint for {source}")
 
-        if not destination_path in source_set:
+        destinations = self.__table[source]
+
+        if not destination in destinations:
             raise MountTableNotExistError(
-                f"The bind '{source_path}' to '{destination_path}' does not exists."
+                f"The bind '{source}' to '{destination}' does not exists."
             )
 
-        source_set.remove(destination_path)
+        destinations.remove(destination)
 
-        n = len(destination_path.name)
+        n = len(str(destination))
 
-        for source, destination in self.__table.items():
-            value = destination_path / source
-            if len(value.name) > n and value in destination:
-                destination.remove(value)
+        for k_source, k_destinations in self.__table.items():
+            value = destination / k_source
+            if len(str(value)) > n and value in k_destinations:
+                k_destinations.remove(value)
 
-    def get_bind(self, source_path: Path) -> HelperSet[T]:
-        return self.__table[source_path]
+    def get_bind(self, source: Path) -> HelperSet[T]:
+        return self.__table[source]
 
     @property
     def table(self) -> TableType[T]:
         return self.__table
+
+    @property
+    def table_str(self) -> TableType[str]:
+        return {
+            str(source): [str(destination) for destination in destinations]
+            for source, destinations in self.__table.items()
+        }
+
+    def mount_filesystem(self, root: Path) -> NoReturn:
+        if root in self.__table:
+            raise MountTableAlreadyExistError(
+                f"The path {root} is already a mountpoint."
+            )
+
+        self.__table[root]

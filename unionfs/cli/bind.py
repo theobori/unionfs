@@ -3,12 +3,12 @@
 from argparse import _SubParsersAction, ArgumentParser
 from pathlib import Path
 import sys
-from typing import Any, NoReturn
+from typing import NoReturn
 
 from unionfs.common.bind import InsertType
 from unionfs.daemon.daemon import DAEMON_UNIX_SOCKET_PATH
-
-from unionfs.client import client_send_and_recv_obj
+from unionfs.exceptions import UnionFSError
+from unionfs.protocol.specification.action.bind import client_bind
 
 
 def create_subparser_bind(
@@ -36,7 +36,7 @@ def create_subparser_bind(
     )
     parser.add_argument(
         "-u",
-        "--unix_socket",
+        "--unix_socket_path",
         required=False,
         default=Path(DAEMON_UNIX_SOCKET_PATH),
         type=Path,
@@ -46,7 +46,7 @@ def create_subparser_bind(
 
 
 def cli_bind(
-    source: Path, destination: Path, after: bool, before: bool, unix_socket: Path
+    source: Path, destination: Path, after: bool, before: bool, unix_socket_path: Path
 ) -> NoReturn:
     insert_type: InsertType
     if after:
@@ -57,28 +57,13 @@ def cli_bind(
         print("At least one insert type is required.", file=sys.stderr)
         sys.exit(1)
 
-    status: str
-    value: Any
     try:
-        status, value = client_send_and_recv_obj(
-            unix_socket,
-            {
-                "action": "bind",
-                "source": source.absolute().name,
-                "destination": destination.absolute().name,
-                "insert_type": insert_type.value,
-            },
-        )
+        client_bind(unix_socket_path, source, destination, insert_type)
+    except UnionFSError as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
         print(e, file=sys.stderr)
         sys.exit(1)
 
-    match status:
-        case "success":
-            print(f"Successfully bound '{source}' to '{destination}'.")
-        case "error":
-            print(value)
-            # handle each error, some should cause exit 1
-        case _:
-            print("Unknown status", file=sys.stderr)
-            sys.exit(1)
+    print(f"Succesfully bound '{source.absolute()}' to '{destination.absolute()}'.")
