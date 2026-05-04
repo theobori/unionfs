@@ -4,7 +4,7 @@ from typing import Dict, Hashable, Iterable, Iterator, NoReturn, Optional
 
 from unionfs.daemon.helper_set.exceptions import (
     HelperSetEmptyError,
-    HelperSetValueNotExistError,
+    HelperSetNotExistError,
 )
 from unionfs.daemon.helper_set.neighbors import Neighbors
 from unionfs.daemon.helper_set.node import Node
@@ -25,7 +25,7 @@ class HelperSet[T: Hashable]:
     """
 
     def __init__(self, iterable: Optional[Iterable] = None):
-        self._hashmap: Dict[T, Node[T][T]] = dict()
+        self._hashmap: Dict[T, Node[T]] = dict()
         self._head: Optional[Node] = None
         self._tail: Optional[Node] = None
 
@@ -143,14 +143,14 @@ class HelperSet[T: Hashable]:
         """Remove a specific value.
 
         Raises:
-            HelperSetValueNotExistError: If the value does not exist
+            HelperSetNotExistError: If the value does not exist
 
         Returns:
             NoReturn: It returns nothing.
         """
 
         if not value in self:
-            raise HelperSetValueNotExistError(f"The value {value} does not exist")
+            raise HelperSetNotExistError(f"The value {value} does not exist")
 
         node = self._hashmap[value]
         previous = node.neighbors.previous
@@ -169,14 +169,14 @@ class HelperSet[T: Hashable]:
         """Push a value after a specific value.
 
         Raises:
-            HelperSetValueNotExistError: If the value `after` does not exist
+            HelperSetNotExistError: If the value `after` does not exist
 
         Returns:
             NoReturn: It returns nothing.
         """
 
         if after not in self._hashmap:
-            raise HelperSetValueNotExistError(f"The value {after} does not exist")
+            raise HelperSetNotExistError(f"The value {after} does not exist")
         if value in self._hashmap:
             return
 

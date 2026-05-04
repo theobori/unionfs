@@ -3,6 +3,8 @@
   buildPythonPackage,
   hatch,
   pytestCheckHook,
+  msgpack,
+  mfusepy,
 }:
 buildPythonPackage {
   pname = "unionfs";
@@ -15,9 +17,12 @@ buildPythonPackage {
     hatch
   ];
 
-  dependencies = [ ];
+  dependencies = [
+    msgpack
+    mfusepy
+  ];
 
-  # nativeCheckInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "unionfs" ];
 

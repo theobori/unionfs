@@ -17,5 +17,5 @@ class HelperSetEmptyError(HelperSetError):
     """HelperSet empty data error."""
 
 
-class HelperSetValueNotExistError(HelperSetError):
+class HelperSetNotExistError(HelperSetError):
     """HelperSet value does not exist error."""

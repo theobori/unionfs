@@ -5,7 +5,7 @@ import unittest
 from unionfs.daemon.helper_set.helper_set import HelperSet
 from unionfs.daemon.helper_set.exceptions import (
     HelperSetEmptyError,
-    HelperSetValueNotExistError,
+    HelperSetNotExistError,
 )
 
 
@@ -52,13 +52,13 @@ class TestHelperSet(unittest.TestCase):
         hs = HelperSet([1, 2, 3, 4])
 
         self.assertListEqual(list(hs), [1, 2, 3, 4])
-        hs.pop()
+        self.assertEqual(hs.pop(), 4)
         self.assertListEqual(list(hs), [1, 2, 3])
-        hs.pop()
+        self.assertEqual(hs.pop(), 3)
         self.assertListEqual(list(hs), [1, 2])
-        hs.pop()
+        self.assertEqual(hs.pop(), 2)
         self.assertListEqual(list(hs), [1])
-        hs.pop()
+        self.assertEqual(hs.pop(), 1)
         self.assertListEqual(list(hs), [])
 
         with self.assertRaises(HelperSetEmptyError):
@@ -70,13 +70,13 @@ class TestHelperSet(unittest.TestCase):
         hs = HelperSet([1, 2, 3, 4])
 
         self.assertListEqual(list(hs), [1, 2, 3, 4])
-        hs.popleft()
+        self.assertEqual(hs.popleft(), 1)
         self.assertListEqual(list(hs), [2, 3, 4])
-        hs.popleft()
+        self.assertEqual(hs.popleft(), 2)
         self.assertListEqual(list(hs), [3, 4])
-        hs.popleft()
+        self.assertEqual(hs.popleft(), 3)
         self.assertListEqual(list(hs), [4])
-        hs.popleft()
+        self.assertEqual(hs.popleft(), 4)
         self.assertListEqual(list(hs), [])
 
         with self.assertRaises(HelperSetEmptyError):
@@ -97,21 +97,41 @@ class TestHelperSet(unittest.TestCase):
         hs.remove(1)
         self.assertListEqual(list(hs), [])
 
-        with self.assertRaises(HelperSetValueNotExistError):
+        with self.assertRaises(HelperSetNotExistError):
             hs.remove(0xDEADBEEF)
 
-    def push_after(self):
+    def test_push_after(self):
         """Test the helper set push_after method"""
 
         hs = HelperSet([1, 2, 3, 4])
 
         self.assertListEqual(list(hs), [1, 2, 3, 4])
         hs.push_after(-1, 1)
-        self.assertListEqual(list(hs), [1, -1, 3, 4])
+        self.assertListEqual(list(hs), [1, -1, 2, 3, 4])
         hs.push_after(-2, 2)
-        self.assertListEqual(list(hs), [1, -1, 3, -3, 4])
+        self.assertListEqual(list(hs), [1, -1, 2, -2, 3, 4])
         hs.push_after(-3, 3)
-        self.assertListEqual(list(hs), [1, -1, 3, -3, 4, -4])
+        self.assertListEqual(list(hs), [1, -1, 2, -2, 3, -3, 4])
+        hs.push_after(-4, 4)
+        self.assertListEqual(list(hs), [1, -1, 2, -2, 3, -3, 4, -4])
 
-        with self.assertRaises(HelperSetValueNotExistError):
+        with self.assertRaises(HelperSetNotExistError):
             hs.remove(0xDEADBEEF)
+
+    def test_mix_operations(self):
+        """Test the helper set operations method"""
+
+        hs = HelperSet([1, 2, 3, 4])
+
+        self.assertListEqual(list(hs), [1, 2, 3, 4])
+        hs.push_after(-1, 1)
+        self.assertListEqual(list(hs), [1, -1, 2, 3, 4])
+        hs.remove(2)
+        self.assertListEqual(list(hs), [1, -1, 3, 4])
+        self.assertEqual(hs.popleft(), 1)
+        self.assertEqual(hs.popleft(), -1)
+        self.assertListEqual(list(hs), [3, 4])
+        hs.push(5)
+        self.assertListEqual(list(hs), [3, 4, 5])
+        hs.push_after(6, 4)
+        self.assertListEqual(list(hs), [3, 4, 6, 5])
