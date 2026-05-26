@@ -1,7 +1,7 @@
 """The FUSE union table module."""
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 from collections import defaultdict
 
 from typing import NoReturn
@@ -99,4 +99,4 @@ class MountTable[T]:
                 f"The path {root} is already a mountpoint."
             )
 
-        self.__table[root]
+        self.__table[root] = HelperSet[T]()

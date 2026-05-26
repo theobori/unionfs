@@ -1,23 +1,18 @@
 """The fuse filsystem module."""
 
 import errno
-from functools import cache
 import os
-import socket
 import stat
 import threading
 import time
-import errno
 
 import mfusepy as fuse
 
 from pathlib import Path
 from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple
 
-from unionfs.protocol.client import receive_response
-from unionfs.protocol.specification.action.action import ActionValue
 from unionfs.protocol.specification.action.show import client_show
-from unionfs.protocol.specification.status import StatusValue
+from unionfs.cache import TTLCacheEntry, TTLCache
 
 
 def remove_slash_prefix(func):
@@ -29,17 +24,37 @@ def remove_slash_prefix(func):
     return wrapper
 
 
+def getattr_helper(st: os.stat_result) -> Dict[str, Any]:
+    return {
+        key.removesuffix("_ns"): getattr(st, key)
+        for key in (
+            "st_atime_ns",
+            "st_ctime_ns",
+            "st_gid",
+            "st_mode",
+            "st_mtime_ns",
+            "st_nlink",
+            "st_size",
+            "st_uid",
+        )
+    }
+
+
 class UnionFilesystem(fuse.Operations):
     def __init__(self, root: Path, unix_socket_path: Path):
         self.__root = root.absolute()
         self.__unix_socket_path = unix_socket_path
 
+        self.__directories_ttl_cache = TTLCacheEntry[List[str]]()
+        self.__directories_ttl_cache_lock = threading.Lock()
+        self.__getattr_ttl_cache = TTLCache(ttl=5)
+
     def __get_bound_directories(self) -> List[str]:
         directories: List[str]
-        try:
-            directories = client_show(self.__unix_socket_path, self.__root)
-        except Exception as e:
-            raise fuse.FuseOSError(errno.ENODATA)
+        with self.__directories_ttl_cache_lock:
+            directories = self.__directories_ttl_cache.get_and_set_if_needed(
+                client_show, self.__unix_socket_path, self.__root
+            )
 
         return directories
 
@@ -76,18 +91,26 @@ class UnionFilesystem(fuse.Operations):
     @remove_slash_prefix
     @fuse.overrides(fuse.Operations)
     def chmod(self, path: str, mode: int) -> int:
-        return self.__process_first_available_path(path, os.chmod, mode)
+        ans = self.__process_first_available_path(path, os.chmod, mode)
+
+        self.__getattr_ttl_cache.invalidate(path)
+
+        return ans
 
     @remove_slash_prefix
     @fuse.overrides(fuse.Operations)
     def chown(self, path: str, uid: int, gid: int) -> int:
-        return self.__process_first_available_path(path, os.chown, uid, gid)
+        ans = self.__process_first_available_path(path, os.chown, uid, gid)
+
+        self.__getattr_ttl_cache.invalidate(path)
+
+        return ans
 
     @remove_slash_prefix
     @fuse.overrides(fuse.Operations)
     def create(self, path: str, mode: int, fi=None) -> int:
         # TODO: handle path is None
-        return self.__process_first_available_path(
+        ans = self.__process_first_available_path(
             path,
             os.open,
             os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
@@ -95,37 +118,37 @@ class UnionFilesystem(fuse.Operations):
             ignore_exist=True,
         )
 
+        self.__getattr_ttl_cache.invalidate(path)
+        self.__getattr_ttl_cache.invalidate(os.path.dirname(path))
+
+        return ans
+
     @remove_slash_prefix
     @fuse.overrides(fuse.Operations)
-    def getattr(self, path: str, fh=None) -> dict[str, Any]:
-        st: os.stat_result
+    def getattr(self, path: str, fh=None) -> Dict[str, Any]:
         if fh is not None:
             st = os.fstat(fh)
-        else:
+            return getattr_helper(st)
+
+        def helper() -> Dict[str, Any]:
             first_path = self.__get_first_exist_path(path)
-            if first_path is not None:
-                st = os.lstat(first_path)
-            else:
+            if first_path is None:
                 raise fuse.FuseOSError(errno.ENOENT)
 
-        return {
-            key.removesuffix("_ns"): getattr(st, key)
-            for key in (
-                "st_atime_ns",
-                "st_ctime_ns",
-                "st_gid",
-                "st_mode",
-                "st_mtime_ns",
-                "st_nlink",
-                "st_size",
-                "st_uid",
-            )
-        }
+            st = os.lstat(first_path)
+            return getattr_helper(st)
+
+        return self.__getattr_ttl_cache.get_and_set_if_needed(path, helper)
 
     @remove_slash_prefix
     @fuse.overrides(fuse.Operations)
     def mkdir(self, path: str, mode: int) -> int:
-        return self.__process_first_available_path(path, os.mkdir, mode)
+        ans = self.__process_first_available_path(path, os.mkdir, mode)
+
+        self.__getattr_ttl_cache.invalidate(path)
+        self.__getattr_ttl_cache.invalidate(os.path.dirname(path))
+
+        return ans
 
     @remove_slash_prefix
     @fuse.overrides(fuse.Operations)
@@ -158,7 +181,13 @@ class UnionFilesystem(fuse.Operations):
         if first_path is None:
             raise fuse.FuseOSError(errno.ENOENT)
 
-        os.rename(old, Path(first_path, new))
+        new_full_path = self.__get_first_exist_path(new, ignore_exist=True)
+        os.rename(first_path, new_full_path)
+
+        self.__getattr_ttl_cache.invalidate(old)
+        self.__getattr_ttl_cache.invalidate(os.path.dirname(old))
+        self.__getattr_ttl_cache.invalidate(new)
+        self.__getattr_ttl_cache.invalidate(os.path.dirname(new))
 
         return 0
 
@@ -176,6 +205,9 @@ class UnionFilesystem(fuse.Operations):
 
         if removed is False:
             raise fuse.FuseOSError(errno.ENOENT)
+
+        self.__getattr_ttl_cache.invalidate(path)
+        self.__getattr_ttl_cache.invalidate(os.path.dirname(path))
 
         return 0
 
@@ -212,8 +244,13 @@ class UnionFilesystem(fuse.Operations):
         if first_path is None:
             raise fuse.FuseOSError(errno.ENOENT)
 
+        ans: int
         with open(first_path, "rb+") as f:
-            f.truncate(length)
+            ans = f.truncate(length)
+
+        self.__getattr_ttl_cache.invalidate(path)
+
+        return ans
 
     @remove_slash_prefix
     @fuse.overrides(fuse.Operations)
@@ -224,6 +261,9 @@ class UnionFilesystem(fuse.Operations):
             full_path = Path(directory, path)
             if full_path.exists():
                 os.unlink(full_path)
+
+        self.__getattr_ttl_cache.invalidate(path)
+        self.__getattr_ttl_cache.invalidate(os.path.dirname(path))
 
         return 0
 
@@ -247,7 +287,11 @@ class UnionFilesystem(fuse.Operations):
 
             os.utime(path, ns=ns)
 
-        return self.__process_first_available_path(path, helper)
+        ans = self.__process_first_available_path(path, helper)
+
+        self.__getattr_ttl_cache.invalidate(path)
+
+        return ans
 
     @remove_slash_prefix
     @fuse.overrides(fuse.Operations)
@@ -258,6 +302,8 @@ class UnionFilesystem(fuse.Operations):
     @fuse.overrides(fuse.Operations)
     def release(self, path: str, fh: int) -> int:
         os.close(fh)
+
+        self.__getattr_ttl_cache.invalidate(path)
 
         return 0
 
@@ -276,8 +322,14 @@ class UnionFilesystem(fuse.Operations):
         else:
             os.mknod(first_path, mode, dev)
 
+        self.__getattr_ttl_cache.invalidate(path)
+        self.__getattr_ttl_cache.invalidate(os.path.dirname(path))
+
+        return 0
+
     @remove_slash_prefix
     @fuse.overrides(fuse.Operations)
     def write(self, path: str, data, offset: int, fh: int) -> int:
+        # TODO invalidate getattr cache for path ??
         os.lseek(fh, offset, 0)
         return os.write(fh, data)

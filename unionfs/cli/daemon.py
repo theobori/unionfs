@@ -52,6 +52,8 @@ def cli_daemon(unix_socket_path: Path, verbose: bool) -> NoReturn:
         NoReturn: It returns nothing.
     """
 
+    # TODO Remove the unix socket file when programs is killed
+
     server_address = str(unix_socket_path.absolute())
 
     daemon_start(server_address, verbose)
