@@ -47,7 +47,7 @@ def cli_mount(root: Path, unix_socket_path: Path) -> NoReturn:
         unix_socket_path (Path): The unix_socket_path exposing the mount table.
 
     Returns:
-        NoReturn: It returns nothing.
+        None: It returns nothing.
     """
 
     absolute_root_path = root.absolute()

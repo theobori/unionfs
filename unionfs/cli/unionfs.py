@@ -37,7 +37,7 @@ def cli_unionfs() -> NoReturn:
     """The UnionFS CLI exposing the filesystem to FUSE.
 
     Returns:
-        NoReturn: It returns nothing.
+        None: It returns nothing.
     """
 
     parser = create_parser_unionfs()

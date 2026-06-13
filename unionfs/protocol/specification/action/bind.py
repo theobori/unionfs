@@ -2,7 +2,7 @@ import socket
 
 from enum import IntEnum, StrEnum
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import Any
 
 from unionfs.common.bind import InsertType
 from unionfs.protocol.client import _client_send_and_receive_response
@@ -28,7 +28,7 @@ class BindErrorMessageValue(IntEnum):
 
 def _client_bind(
     sock: socket.socket, source: Path, destination: Path, insert_type: InsertType
-) -> NoReturn:
+) -> None:
     status: StatusValue
     message: Any
     try:
@@ -59,7 +59,7 @@ def _client_bind(
             )  # It should never happen
         case BindErrorMessageValue.BINDING_ALREADY_EXISTS:
             raise UnionFSError(
-                f"The binding '{source.absolute()}' to '{source.absolute()}' already exists."
+                f"The binding '{source.absolute()}' to '{destination.absolute()}' already exists."
             )
         case BindErrorMessageValue.SERVER_ERROR:
             raise UnionFSError("Server internal error.")
@@ -67,7 +67,7 @@ def _client_bind(
 
 def client_bind(
     unix_socket_path: Path, source: Path, destination: Path, insert_type: InsertType
-) -> NoReturn:
+) -> None:
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
         try:
             sock.connect(str(unix_socket_path.absolute()))

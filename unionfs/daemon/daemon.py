@@ -4,7 +4,7 @@ import socketserver
 import logging
 
 from pathlib import Path
-from typing import Any, Container, Dict, NoReturn
+from typing import Any, Container, Dict
 
 from unionfs.common.bind import InsertType
 from unionfs.common.socket import send_packed_obj, recv_unpacked_obj
@@ -29,8 +29,6 @@ DAEMON_UNIX_SOCKET_PATH = "/tmp/unionfs.sock"
 
 logger = logging.getLogger(__file__)
 
-aa = 0
-
 
 class UNIXDaemonHandler(socketserver.BaseRequestHandler):
     def __init__(self, request, client_address, server):
@@ -44,16 +42,16 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
 
         super().__init__(request, client_address, server)
 
-    def __send_obj(self, obj: Any) -> NoReturn:
+    def __send_obj(self, obj: Any) -> None:
         send_packed_obj(self.request, obj)
 
     def __recv_obj(self) -> Any:
         return recv_unpacked_obj(self.request)
 
-    def __send_error(self, obj: Any) -> NoReturn:
+    def __send_error(self, obj: Any) -> None:
         self.__send_obj({Field.STATUS: StatusValue.ERROR, Field.MESSAGE: obj})
 
-    def __send_succes(self, obj: Any) -> NoReturn:
+    def __send_succes(self, obj: Any) -> None:
         self.__send_obj({Field.STATUS: StatusValue.SUCCESS, Field.MESSAGE: obj})
 
     def __send_error_if_missing_fields(self, obj: Any, fields: Container[str]) -> bool:
@@ -69,7 +67,7 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
 
     def __action_bind(
         self, source: Path, destination: Path, insert_type: InsertType
-    ) -> NoReturn:
+    ) -> None:
         try:
             self.__mount_table.create_bind(source, destination, insert_type)
             self.__send_succes(ActionValue.BIND)
@@ -91,7 +89,7 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
             logger.error(e)
             raise e
 
-    def __action_bind_with_dict(self, _dict: Dict[str, Any]) -> NoReturn:
+    def __action_bind_with_dict(self, _dict: Dict[str, Any]) -> None:
         err = self.__send_error_if_missing_fields(
             _dict,
             (
@@ -111,24 +109,24 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
             insert_type,
         )
 
-    def __action_show(self, root: Path) -> NoReturn:
+    def __action_show(self, root: Path) -> None:
         hs = self.__mount_table.get_bind(root)
         self.__send_succes([str(x) for x in hs])
 
-    def __action_show_with_dict(self, _dict: Dict[str, Any]) -> NoReturn:
+    def __action_show_with_dict(self, _dict: Dict[str, Any]) -> None:
         err = self.__send_error_if_missing_fields(_dict, (ShowMessageField.ROOT,))
         if err:
             return
 
         self.__action_show(Path(_dict[ShowMessageField.ROOT]))
 
-    def __action_show_all(self) -> NoReturn:
+    def __action_show_all(self) -> None:
         self.__send_succes(self.__mount_table.table_str)
 
-    def __action_show_all_with_dict(self) -> NoReturn:
+    def __action_show_all_with_dict(self) -> None:
         self.__action_show_all()
 
-    def __action_unbind(self, source: Path, destination: Path) -> NoReturn:
+    def __action_unbind(self, source: Path, destination: Path) -> None:
         try:
             self.__mount_table.remove_bind(source, destination)
             self.__send_succes(ActionValue.UNBIND)
@@ -147,7 +145,7 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
             logger.error(e)
             raise e
 
-    def __action_unbind_with_dict(self, _dict: Dict[str, Any]) -> NoReturn:
+    def __action_unbind_with_dict(self, _dict: Dict[str, Any]) -> None:
         err = self.__send_error_if_missing_fields(
             _dict, (UnbindMessageField.SOURCE, UnbindMessageField.DESTINATION)
         )
@@ -159,7 +157,7 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
             Path(_dict[UnbindMessageField.DESTINATION]),
         )
 
-    def __action_mount(self, root: Path) -> NoReturn:
+    def __action_mount(self, root: Path) -> None:
         try:
             self.__mount_table.mount_filesystem(root)
             self.__send_succes(ActionValue.MOUNT)
@@ -173,14 +171,14 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
             logger.error(e)
             raise e
 
-    def __action_mount_with_dict(self, _dict: Dict[str, Any]) -> NoReturn:
+    def __action_mount_with_dict(self, _dict: Dict[str, Any]) -> None:
         err = self.__send_error_if_missing_fields(_dict, (MountMessageField.ROOT,))
         if err:
             return
 
         self.__action_mount(Path(_dict[MountMessageField.ROOT]))
 
-    def __action_umount(self, root: Path) -> NoReturn:
+    def __action_umount(self, root: Path) -> None:
         try:
             self.__mount_table.umount_filesystem(root)
             self.__send_succes(ActionValue.UMOUNT)
@@ -194,7 +192,7 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
             logger.error(e)
             raise e
 
-    def __action_umount_with_dict(self, _dict: Dict[str, Any]) -> NoReturn:
+    def __action_umount_with_dict(self, _dict: Dict[str, Any]) -> None:
         err = self.__send_error_if_missing_fields(_dict, (UmountMessageField.ROOT,))
         if err:
             return
@@ -214,10 +212,6 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
 
         action: ActionValue = obj[Field.ACTION]
 
-        global aa
-        aa += 1
-        logger.debug(f"{aa} Received '{action}' action.")
-
         match action:
             case ActionValue.BIND:
                 self.__action_bind_with_dict(obj)
@@ -233,7 +227,7 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
                 self.__action_unbind_with_dict(obj)
 
 
-def daemon_start(server_address: str, verbose: bool) -> NoReturn:
+def daemon_start(server_address: str, verbose: bool) -> None:
     if verbose:
         logger.setLevel(logging.DEBUG)
     else:

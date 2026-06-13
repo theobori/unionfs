@@ -2,7 +2,7 @@ import socket
 
 from enum import IntEnum, StrEnum
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import Any
 
 from unionfs.exceptions import UnionFSError
 from unionfs.protocol.client import _client_send_and_receive_response
@@ -21,7 +21,7 @@ class UMountErrorMessageValue(IntEnum):
     SERVER_ERROR = ErrorMessageValue.SERVER_ERROR
 
 
-def _client_umount(sock: socket.socket, root: Path) -> NoReturn:
+def _client_umount(sock: socket.socket, root: Path) -> None:
     status: StatusValue
     message: Any
     try:
@@ -47,7 +47,7 @@ def _client_umount(sock: socket.socket, root: Path) -> NoReturn:
             raise UnionFSError("Server internal error.")
 
 
-def client_umount(unix_socket_path: Path, root: Path) -> NoReturn:
+def client_umount(unix_socket_path: Path, root: Path) -> None:
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
         try:
             sock.connect(str(unix_socket_path.absolute()))

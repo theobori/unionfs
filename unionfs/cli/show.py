@@ -38,7 +38,7 @@ def create_subparser_show(
     return parser
 
 
-def cli_show_with_root(root: Path, destinations: List[str]) -> NoReturn:
+def cli_show_with_root(root: Path, destinations: List[str]) -> None:
     root_str = str(root.absolute())
 
     if len(destinations) == 0:
@@ -49,7 +49,7 @@ def cli_show_with_root(root: Path, destinations: List[str]) -> NoReturn:
         print(f"'{root_str}' -> {destination}")
 
 
-def cli_show_without_root(table: Dict[str, str]) -> NoReturn:
+def cli_show_without_root(table: Dict[str, str]) -> None:
     if len(table) == 0:
         print("The mount table is empty.")
         return
@@ -66,7 +66,7 @@ def cli_show(root: Optional[Path], unix_socket_path: Path) -> NoReturn:
         unix_socket_path (Path): The unix_socket_path exposing the mount table.
 
     Returns:
-        NoReturn: It returns nothing.
+        None: It returns nothing.
     """
 
     obj: Union[List[str], Dict[str, str]]

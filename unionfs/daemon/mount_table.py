@@ -4,8 +4,6 @@ from pathlib import Path
 from typing import Dict
 from collections import defaultdict
 
-from typing import NoReturn
-
 from unionfs.common.bind import InsertType
 from unionfs.daemon.exceptions import (
     MountTableAlreadyExistError,
@@ -26,7 +24,7 @@ class MountTable[T]:
 
     def create_bind(
         self, source: Path, destination: Path, insert_type: InsertType
-    ) -> NoReturn:
+    ) -> None:
         if not source in self.__table:
             raise MountTableNoMountPointError(f"There are no mountpoint for {source}")
 
@@ -59,7 +57,7 @@ class MountTable[T]:
                     case InsertType.BEFORE:
                         v_destinations.pushleft(new_path)
 
-    def remove_bind(self, source: Path, destination: Path) -> NoReturn:
+    def remove_bind(self, source: Path, destination: Path) -> None:
         if not source in self.__table:
             raise MountTableNoMountPointError(f"There are no mountpoint for {source}")
 
@@ -93,7 +91,7 @@ class MountTable[T]:
             for source, destinations in self.__table.items()
         }
 
-    def mount_filesystem(self, root: Path) -> NoReturn:
+    def mount_filesystem(self, root: Path) -> None:
         if root in self.__table:
             raise MountTableAlreadyExistError(
                 f"The path '{root}' is already a mountpoint."
@@ -101,7 +99,7 @@ class MountTable[T]:
 
         self.__table[root] = HelperSet[T]()
 
-    def umount_filesystem(self, root: Path) -> NoReturn:
+    def umount_filesystem(self, root: Path) -> None:
         if not root in self.__table:
             raise MountTableNoMountPointError(f"The path '{root}' is not a mountpoint.")
 

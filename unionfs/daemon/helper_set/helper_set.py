@@ -1,6 +1,6 @@
 """The helper set module."""
 
-from typing import Dict, Hashable, Iterable, Iterator, NoReturn, Optional
+from typing import Dict, Hashable, Iterable, Iterator, Optional
 
 from unionfs.daemon.helper_set.exceptions import (
     HelperSetEmptyError,
@@ -31,14 +31,14 @@ class HelperSet[T: Hashable]:
             for el in iterable:
                 self.push(el)
 
-    def push(self, value: T) -> NoReturn:
+    def push(self, value: T) -> None:
         """Add a value to the right.
 
         Args:
             value (T): The value.
 
         Returns:
-            NoReturn: It returns nothing.
+            None: It returns nothing.
         """
 
         if value in self._hashmap:
@@ -54,14 +54,14 @@ class HelperSet[T: Hashable]:
 
         self._hashmap[value] = node
 
-    def pushleft(self, value: T) -> NoReturn:
+    def pushleft(self, value: T) -> None:
         """Add a value to the left.
 
         Args:
             value (T): The value.
 
         Returns:
-            NoReturn: It returns nothing.
+            None: It returns nothing.
         """
 
         if value in self._hashmap:
@@ -137,14 +137,14 @@ class HelperSet[T: Hashable]:
     def __contains__(self, value: T) -> bool:
         return value in self._hashmap
 
-    def remove(self, value: T) -> NoReturn:
+    def remove(self, value: T) -> None:
         """Remove a specific value.
 
         Raises:
             HelperSetNotExistError: If the value does not exist
 
         Returns:
-            NoReturn: It returns nothing.
+            None: It returns nothing.
         """
 
         if not value in self:
@@ -158,19 +158,22 @@ class HelperSet[T: Hashable]:
             previous.neighbors.next = _next
         if _next:
             _next.neighbors.previous = previous
-        if self._head is node:
+
+        if node is self._head:
             self._head = _next
+        if node is self._tail:
+            self._tail = previous
 
         del self._hashmap[value]
 
-    def push_after(self, value: T, after: T) -> NoReturn:
+    def push_after(self, value: T, after: T) -> None:
         """Push a value after a specific value.
 
         Raises:
             HelperSetNotExistError: If the value `after` does not exist
 
         Returns:
-            NoReturn: It returns nothing.
+            None: It returns nothing.
         """
 
         if after not in self._hashmap:
@@ -188,6 +191,8 @@ class HelperSet[T: Hashable]:
 
         if after_node_next:
             after_node_next.neighbors.previous = node
+        if after_node is self._tail:
+            self._tail = node
 
         after_node.neighbors.next = node
 

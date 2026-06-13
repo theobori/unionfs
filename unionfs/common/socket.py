@@ -5,7 +5,7 @@ import socket
 
 import msgpack
 
-from typing import Any, ByteString, NoReturn
+from typing import Any, ByteString
 
 
 # Source - https://stackoverflow.com/a/17668009
@@ -44,7 +44,7 @@ def recvall(sock: socket.socket, n: int):
     return data
 
 
-def send_packed_obj(sock: socket.socket, obj: Any) -> NoReturn:
+def send_packed_obj(sock: socket.socket, obj: Any) -> None:
     send_msg(sock, msgpack.packb(obj))
 
 

@@ -2,7 +2,7 @@ import socket
 
 from enum import IntEnum, StrEnum
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import Any
 
 from unionfs.protocol.client import _client_send_and_receive_response
 from unionfs.protocol.specification.field import Field
@@ -23,7 +23,7 @@ class UnbindErrorMessageValue(IntEnum):
     SERVER_ERROR = ErrorMessageValue.SERVER_ERROR
 
 
-def _client_unbind(sock: socket.socket, source: Path, destination: Path) -> NoReturn:
+def _client_unbind(sock: socket.socket, source: Path, destination: Path) -> None:
     status: StatusValue
     message: Any
     try:
@@ -55,7 +55,7 @@ def _client_unbind(sock: socket.socket, source: Path, destination: Path) -> NoRe
             raise UnionFSError("Server internal error.")
 
 
-def client_unbind(unix_socket_path: Path, source: Path, destination: Path) -> NoReturn:
+def client_unbind(unix_socket_path: Path, source: Path, destination: Path) -> None:
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
         try:
             sock.connect(str(unix_socket_path.absolute()))

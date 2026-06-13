@@ -1,6 +1,6 @@
 """The TTL cache module."""
 
-from typing import Dict, NoReturn, Optional
+from typing import Dict, Optional
 
 from unionfs.cache.ttl_cache_entry import TTLCacheEntry
 
@@ -45,6 +45,6 @@ class TTLCache[K, V]:
 
         return value
 
-    def invalidate(self, key: K) -> NoReturn:
+    def invalidate(self, key: K) -> None:
         if key in self.__entries:
             del self.__entries[key]

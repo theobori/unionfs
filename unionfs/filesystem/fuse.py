@@ -9,7 +9,7 @@ import time
 import mfusepy as fuse
 
 from pathlib import Path
-from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from unionfs.protocol.specification.action.show import client_show
 from unionfs.cache import TTLCacheEntry, TTLCache
@@ -45,16 +45,17 @@ class UnionFilesystem(fuse.Operations):
         self.__root = root.absolute()
         self.__unix_socket_path = unix_socket_path
 
-        self.__directories_ttl_cache = TTLCacheEntry[List[str]](ttl=4)
+        self.__directories_ttl_cache = TTLCacheEntry[List[str]](ttl=2)
         self.__directories_ttl_cache_lock = threading.Lock()
         self.__getattr_ttl_cache = TTLCache(ttl=5)
 
     def __get_bound_directories(self) -> List[str]:
         directories: List[str]
-        with self.__directories_ttl_cache_lock:
-            directories = self.__directories_ttl_cache.get_then_set_if_needed(
-                client_show, self.__unix_socket_path, self.__root
-            )
+        # with self.__directories_ttl_cache_lock:
+        # test without lock
+        directories = self.__directories_ttl_cache.get_then_set_if_needed(
+            client_show, self.__unix_socket_path, self.__root
+        )
 
         return directories
 
@@ -64,9 +65,9 @@ class UnionFilesystem(fuse.Operations):
         directories = self.__get_bound_directories()
 
         for directory in directories:
+            # Not creating a Path object to avoid aditionnal system calls
             new_path = os.path.join(directory, path)
-            # new_path = Path(directory, path)
-            if ignore_exist or os.path.exists(new_path):
+            if ignore_exist or os.path.lexists(new_path):
                 return new_path
 
         return None
@@ -132,12 +133,20 @@ class UnionFilesystem(fuse.Operations):
             return getattr_helper(st)
 
         def helper() -> Dict[str, Any]:
-            first_path = self.__get_first_exist_path(path)
-            if first_path is None:
-                raise fuse.FuseOSError(errno.ENOENT)
+            directories = self.__get_bound_directories()
 
-            st = os.lstat(first_path)
-            return getattr_helper(st)
+            for directory in directories:
+                full_path = os.path.join(directory, path)
+
+                stat_result: os.stat_result
+                try:
+                    stat_result = os.lstat(full_path)
+                except (OSError, ValueError):
+                    continue
+
+                return getattr_helper(stat_result)
+
+            raise fuse.FuseOSError(errno.ENOENT)
 
         return self.__getattr_ttl_cache.get_then_set_if_needed(path, helper)
 
@@ -221,7 +230,6 @@ class UnionFilesystem(fuse.Operations):
         removed = False
         for directory in directories:
             full_path = os.path.join(directory, path)
-            # full_path = Path(directory, path)
             if os.path.exists(full_path):
                 os.rmdir(full_path)
                 removed = True
@@ -281,7 +289,6 @@ class UnionFilesystem(fuse.Operations):
         directories = self.__get_bound_directories()
 
         for directory in directories:
-            # full_path = Path(directory, path)
             full_path = os.path.join(directory, path)
             if os.path.exists(full_path):
                 os.unlink(full_path)
@@ -294,7 +301,7 @@ class UnionFilesystem(fuse.Operations):
     @remove_slash_prefix
     @fuse.overrides(fuse.Operations)
     def utimens(self, path: str, times: Optional[Tuple[float, float]] = None) -> int:
-        def helper(path: str) -> NoReturn:
+        def helper(path: str) -> None:
             ns: Tuple[int, int]
 
             if times:

@@ -48,7 +48,7 @@ def cli_daemon(unix_socket_path: Path, verbose: bool) -> NoReturn:
         unix_socket_path (Path): The unix_socket_path where the daemon will listen to.
 
     Returns:
-        NoReturn: It returns nothing.
+        None: It returns nothing.
     """
 
     # TODO Remove the unix socket file when programs is killed
