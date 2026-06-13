@@ -4,7 +4,6 @@ from enum import IntEnum, StrEnum
 from pathlib import Path
 from typing import Any, NoReturn
 
-from unionfs.common.bind import InsertType
 from unionfs.exceptions import UnionFSError
 from unionfs.protocol.client import _client_send_and_receive_response
 from unionfs.protocol.specification.action import ActionValue

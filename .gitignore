@@ -220,3 +220,7 @@ __marimo__/
 # My additional files to ignore
 .direnv
 result
+
+# For tests
+/hello
+/abc

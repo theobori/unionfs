@@ -56,7 +56,7 @@ def cli_show_without_root(table: Dict[str, str]) -> NoReturn:
 
     for source, destinations in table.items():
         for destination in destinations:
-            print(f"'{source}' -> {destination}")
+            print(f"'{source}' -> '{destination}'")
 
 
 def cli_show(root: Optional[Path], unix_socket_path: Path) -> NoReturn:

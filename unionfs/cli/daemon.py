@@ -1,6 +1,5 @@
 """The UnionFS CLI daemon subcommand"""
 
-import socketserver
 import logging
 
 from argparse import _SubParsersAction, ArgumentParser

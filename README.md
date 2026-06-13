@@ -1,1 +1,1 @@
-# UnionFS
+An experimental filesystem with operations inspired by https://1e.iwp9.org/cready/unfs.pdf.

@@ -22,6 +22,7 @@ from unionfs.protocol.specification.action import ActionValue
 from unionfs.protocol.specification.action.bind import BindMessageField
 from unionfs.protocol.specification.action.unbind import UnbindMessageField
 from unionfs.protocol.specification.action.mount import MountMessageField
+from unionfs.protocol.specification.action.umount import UmountMessageField
 from unionfs.protocol.specification.action.show import ShowMessageField
 
 DAEMON_UNIX_SOCKET_PATH = "/tmp/unionfs.sock"
@@ -72,6 +73,10 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
         try:
             self.__mount_table.create_bind(source, destination, insert_type)
             self.__send_succes(ActionValue.BIND)
+
+            logger.info(
+                f"Succesfully bound '{source.absolute()}' to '{source.absolute()}'."
+            )
         except MountTableAlreadyExistError as e:
             self.__send_error(ErrorMessageValue.BINDING_ALREADY_EXISTS)
             logger.error(e)
@@ -85,10 +90,6 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
             self.__send_error(ErrorMessageValue.SERVER_ERROR)
             logger.error(e)
             raise e
-
-        logger.info(
-            f"Succesfully bound '{source.absolute()}' to '{source.absolute()}'."
-        )
 
     def __action_bind_with_dict(self, _dict: Dict[str, Any]) -> NoReturn:
         err = self.__send_error_if_missing_fields(
@@ -131,6 +132,10 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
         try:
             self.__mount_table.remove_bind(source, destination)
             self.__send_succes(ActionValue.UNBIND)
+
+            logger.info(
+                f"Succesfully unbound '{source.absolute()}' to '{destination.absolute()}'."
+            )
         except MountTableNoMountPointError as e:
             self.__send_error(ErrorMessageValue.MOUNTPOINT_DOES_NOT_EXIST)
             logger.error(e)
@@ -141,10 +146,6 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
             self.__send_error(ErrorMessageValue.SERVER_ERROR)
             logger.error(e)
             raise e
-
-        logger.info(
-            f"Succesfully unbound '{source.absolute()}' to '{source.absolute()}'."
-        )
 
     def __action_unbind_with_dict(self, _dict: Dict[str, Any]) -> NoReturn:
         err = self.__send_error_if_missing_fields(
@@ -162,6 +163,8 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
         try:
             self.__mount_table.mount_filesystem(root)
             self.__send_succes(ActionValue.MOUNT)
+
+            logger.info(f"Succesfully mounted '{root.absolute()}'.")
         except MountTableAlreadyExistError as e:
             self.__send_error(ErrorMessageValue.MOUNTPOINT_ALREADY_EXISTS)
             logger.error(e)
@@ -170,14 +173,33 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
             logger.error(e)
             raise e
 
-        logger.info(f"Succesfully mounted '{root.absolute()}'.")
-
     def __action_mount_with_dict(self, _dict: Dict[str, Any]) -> NoReturn:
         err = self.__send_error_if_missing_fields(_dict, (MountMessageField.ROOT,))
         if err:
             return
 
         self.__action_mount(Path(_dict[MountMessageField.ROOT]))
+
+    def __action_umount(self, root: Path) -> NoReturn:
+        try:
+            self.__mount_table.umount_filesystem(root)
+            self.__send_succes(ActionValue.UMOUNT)
+
+            logger.info(f"Succesfully umounted '{root.absolute()}'.")
+        except MountTableNoMountPointError as e:
+            self.__send_error(ErrorMessageValue.MOUNTPOINT_DOES_NOT_EXIST)
+            logger.error(e)
+        except Exception as e:
+            self.__send_error(ErrorMessageValue.SERVER_ERROR)
+            logger.error(e)
+            raise e
+
+    def __action_umount_with_dict(self, _dict: Dict[str, Any]) -> NoReturn:
+        err = self.__send_error_if_missing_fields(_dict, (UmountMessageField.ROOT,))
+        if err:
+            return
+
+        self.__action_umount(Path(_dict[UmountMessageField.ROOT]))
 
     def handle(self):
         obj = self.__recv_obj()
@@ -206,7 +228,7 @@ class UNIXDaemonHandler(socketserver.BaseRequestHandler):
             case ActionValue.MOUNT:
                 self.__action_mount_with_dict(obj)
             case ActionValue.UMOUNT:
-                pass  # TODO: write umount routine
+                self.__action_umount_with_dict(obj)
             case ActionValue.UNBIND:
                 self.__action_unbind_with_dict(obj)
 

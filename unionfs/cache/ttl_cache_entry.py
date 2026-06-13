@@ -48,9 +48,10 @@ class TTLCacheEntry[T]:
 
         return is_dead
 
-    def get_and_set_if_needed(self, callback, *args, **kwargs) -> T:
+    def get_then_set_if_needed(self, callback, *args, **kwargs) -> T:
         now = time.monotonic()
 
+        # print(now - self.__time > self.__ttl, self.__value)
         if now - self.__time > self.__ttl or self.__value is None:
             self.__value = callback(*args, **kwargs)
             self.__time = now

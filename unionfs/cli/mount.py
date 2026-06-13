@@ -12,6 +12,7 @@ from unionfs.daemon import DAEMON_UNIX_SOCKET_PATH
 from unionfs.exceptions import UnionFSError
 from unionfs.filesystem import UnionFilesystem
 from unionfs.protocol.specification.action.mount import client_mount
+from unionfs.protocol.specification.action.umount import client_umount
 
 
 def create_subparser_mount(
@@ -49,8 +50,10 @@ def cli_mount(root: Path, unix_socket_path: Path) -> NoReturn:
         NoReturn: It returns nothing.
     """
 
+    absolute_root_path = root.absolute()
+
     try:
-        client_mount(unix_socket_path, root)
+        client_mount(unix_socket_path, absolute_root_path)
     except UnionFSError as e:
         print(e, file=sys.stderr)
         sys.exit(1)
@@ -58,10 +61,22 @@ def cli_mount(root: Path, unix_socket_path: Path) -> NoReturn:
         print(e, file=sys.stderr)
         sys.exit(1)
 
-    unionfs = UnionFilesystem(root, unix_socket_path)
+    unionfs = UnionFilesystem(absolute_root_path, unix_socket_path)
 
     fuse.FUSE(
         unionfs,
-        str(root.absolute()),
-        foreground=True,
+        str(absolute_root_path),
+        foreground=False,
+        auto_cache=True,
+        attr_timeout=1.0,
+        entry_timeout=1.0,
     )
+
+    try:
+        client_umount(unix_socket_path, absolute_root_path)
+    except UnionFSError as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)

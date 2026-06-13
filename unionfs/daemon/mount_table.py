@@ -96,7 +96,13 @@ class MountTable[T]:
     def mount_filesystem(self, root: Path) -> NoReturn:
         if root in self.__table:
             raise MountTableAlreadyExistError(
-                f"The path {root} is already a mountpoint."
+                f"The path '{root}' is already a mountpoint."
             )
 
         self.__table[root] = HelperSet[T]()
+
+    def umount_filesystem(self, root: Path) -> NoReturn:
+        if not root in self.__table:
+            raise MountTableNoMountPointError(f"The path '{root}' is not a mountpoint.")
+
+        del self.__table[root]

@@ -49,7 +49,7 @@ def _client_unbind(sock: socket.socket, source: Path, destination: Path) -> NoRe
             )
         case UnbindErrorMessageValue.BINDING_DOES_NOT_EXIST:
             raise UnionFSError(
-                f"The binding '{source.absolute()}'  to '{destination.absolute()}' does not exist."
+                f"The binding '{source.absolute()}' to '{destination.absolute()}' does not exist."
             )  # It should never happen
         case UnbindErrorMessageValue.SERVER_ERROR:
             raise UnionFSError("Server internal error.")
