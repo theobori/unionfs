@@ -12,6 +12,10 @@ The file system operations are inspired by https://1e.iwp9.org/cready/unfs.pdf.
 
 Below are the main components of the project.
 
+### Mount Table
+
+The mount table is a Python object that manages a hash map, where each key is a path corresponding to a mount point, and each value is a custom data structure designed to manage the mounted directories. It has a time complexity of O(1) for each required operation.
+
 ### Daemon
 
 This is a server that must be started before mounting the filesystem. It is responsible for managing the global mount table in memory and handling mount and bind requests.
